@@ -2,184 +2,155 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import ShareForm from "@/app/components/ShareForm";
 
 export default function NoteDetails() {
-
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id as string;
 
   const [note, setNote] = useState<any>(null);
-
-  const [share, setShare] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadNote();
-  }, []);
+    if (id) {
+      loadNote();
+    }
+  }, [id]);
 
   async function loadNote() {
+    try {
+      setLoading(true);
 
-    const token = localStorage.getItem("token");
+      const res = await fetch(`/api/notes/${id}`, {
+        credentials: "include",
+      });
 
-    const res = await fetch(`/api/notes/${id}`, {
+      const data = await res.json();
 
-      headers: {
-
-        Authorization: `Bearer ${token}`
-
+      if (!res.ok) {
+        alert(data.message);
+        return;
       }
 
-    });
+      setNote(data);
+    } catch (error) {
+      console.error(error);
+      alert("Unable to load note");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function revoke(token: string) {
+    const ok = confirm("Revoke this share link?");
+
+    if (!ok) return;
+
+    const res = await fetch(
+      `/api/share/${token}/revoke`,
+      {
+        method: "PATCH",
+        credentials: "include",
+      }
+    );
 
     const data = await res.json();
 
-    setNote(data);
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
 
+    alert("Share link revoked");
+
+    loadNote();
   }
 
-  async function generateShare() {
-
-    const token = localStorage.getItem("token");
-
-    const res = await fetch("/api/share/create", {
-
-      method: "POST",
-
-      headers: {
-
-        "Content-Type": "application/json",
-
-        Authorization: `Bearer ${token}`
-
-      },
-
-      body: JSON.stringify({
-
-        noteId: id,
-
-        shareType: note.shareType,
-
-        accessType: note.accessType,
-
-        expiresAt: note.expiry
-
-      })
-
-    });
-
-    const data = await res.json();
-
-    setShare(data);
-
-  }
-
-  async function revokeShare() {
-
-    if (!share) return;
-
-    const token = localStorage.getItem("token");
-
-    await fetch(`/api/share/${share.share.token}/revoke`, {
-
-      method: "PATCH",
-
-      headers: {
-
-        Authorization: `Bearer ${token}`
-
-      }
-
-    });
-
-    alert("Share Link Revoked");
-
-  }
-
-  if (!note)
+  if (loading) {
     return (
-      <div className="p-10">
+      <div className="p-10 text-center">
         Loading...
       </div>
     );
+  }
+
+  if (!note) {
+    return (
+      <div className="p-10 text-center">
+        Note not found
+      </div>
+    );
+  }
+
+  const share = note.shareLinks?.[0];
 
   return (
+    <div className="max-w-4xl mx-auto mt-10 space-y-8">
 
-    <div className="max-w-3xl mx-auto mt-10 space-y-6">
+      <div className="border rounded-xl p-6">
 
-      <h1 className="text-3xl font-bold">
-        {note.title}
-      </h1>
+        <h1 className="text-3xl font-bold">
+          {note.title}
+        </h1>
 
-      <div className="border rounded p-5 whitespace-pre-wrap">
-        {note.content}
+        <div className="mt-5 whitespace-pre-wrap">
+          {note.content}
+        </div>
+
       </div>
 
-      <button
+      <ShareForm
+        noteId={note.id}
+        onSuccess={loadNote}
+      />
 
-        onClick={generateShare}
+      {share && !share.revoked && (
+        <div className="border rounded-xl p-6 space-y-3">
 
-        className="bg-green-600 text-white px-5 py-2 rounded"
+          <h2 className="text-xl font-semibold">
+            Active Share Link
+          </h2>
 
-      >
-        Generate Share Link
-      </button>
-
-      {share && (
-
-        <div className="border rounded p-5 space-y-3">
+          <input
+            readOnly
+            value={`${window.location.origin}/share/${share.token}`}
+            className="border rounded w-full p-3"
+          />
 
           <div>
-
-            <b>Share URL</b>
-
-            <br />
-
-            <input
-
-              className="border p-2 w-full"
-
-              readOnly
-
-              value={`${window.location.origin}${share.shareLink}`}
-
-            />
-
+            <strong>Share Type:</strong>{" "}
+            {share.shareType}
           </div>
 
-          {share.password && (
+          <div>
+            <strong>Access Type:</strong>{" "}
+            {share.accessType}
+          </div>
 
+          <div>
+            <strong>Views:</strong>{" "}
+            {share.viewCount}
+          </div>
+
+          {share.expiresAt && (
             <div>
-
-              <b>Password</b>
-
-              <input
-
-                className="border p-2 w-full"
-
-                value={share.password}
-
-                readOnly
-
-              />
-
+              <strong>Expires:</strong>{" "}
+              {new Date(
+                share.expiresAt
+              ).toLocaleString()}
             </div>
-
           )}
 
           <button
-
-            onClick={revokeShare}
-
-            className="bg-red-600 text-white px-4 py-2 rounded"
-
+            onClick={() => revoke(share.token)}
+            className="bg-red-600 text-white px-5 py-2 rounded"
           >
             Revoke Link
           </button>
 
         </div>
-
       )}
 
     </div>
-
   );
-
 }

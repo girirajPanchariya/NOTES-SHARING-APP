@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import PasswordDialog from "@/app/components/PasswordDialog";
 
 interface Note {
   title: string;
@@ -9,13 +10,20 @@ interface Note {
 }
 
 export default function SharePage() {
-  const { token } = useParams<{ token: string }>();
+  const params = useParams();
+
+  const token = params.token as string;
 
   const [loading, setLoading] = useState(true);
-  const [password, setPassword] = useState("");
-  const [note, setNote] = useState<Note | null>(null);
-  const [passwordRequired, setPasswordRequired] = useState(false);
-  const [error, setError] = useState("");
+
+  const [note, setNote] =
+    useState<Note | null>(null);
+
+  const [passwordRequired, setPasswordRequired] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     if (token) {
@@ -24,10 +32,14 @@ export default function SharePage() {
   }, [token]);
 
   async function loadShare() {
-    setLoading(true);
-
     try {
-      const res = await fetch(`/api/share/${token}`);
+      setLoading(true);
+      setError("");
+
+      const res = await fetch(
+        `/api/share/${token}`
+      );
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -41,47 +53,24 @@ export default function SharePage() {
       }
 
       setNote(data.note);
-    } catch {
-      setError("Unable to load share.");
+
+    } catch (error) {
+      console.error(error);
+
+      setError("Unable to load note");
     } finally {
       setLoading(false);
     }
   }
 
-  async function unlock() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch(`/api/share/${token}/unlock`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          password,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message);
-        return;
-      }
-
-      setPasswordRequired(false);
-      setNote(data.note);
-    } catch {
-      setError("Unable to unlock note.");
-    } finally {
-      setLoading(false);
-    }
+  function onUnlock(note: Note) {
+    setPasswordRequired(false);
+    setNote(note);
   }
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-20 text-lg">
+      <div className="flex justify-center items-center h-screen text-xl">
         Loading...
       </div>
     );
@@ -89,58 +78,58 @@ export default function SharePage() {
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto mt-20 p-6 border rounded-lg">
-        <h2 className="text-xl font-bold text-red-600 mb-3">
+      <div className="max-w-lg mx-auto mt-20 border rounded-xl p-6">
+
+        <h2 className="text-2xl font-bold text-red-600">
           Error
         </h2>
 
-        <p>{error}</p>
+        <p className="mt-3">
+          {error}
+        </p>
+
       </div>
     );
   }
 
   if (passwordRequired) {
     return (
-      <div className="max-w-md mx-auto mt-20 border rounded-lg p-6">
+      <div className="mt-20">
 
-        <h1 className="text-2xl font-bold mb-5">
-          Password Protected Note
-        </h1>
-
-        <input
-          type="password"
-          placeholder="Enter Access Password"
-          className="border rounded w-full p-3 mb-4"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+        <PasswordDialog
+          token={token}
+          onUnlock={onUnlock}
         />
 
-        <button
-          onClick={unlock}
-          className="bg-blue-600 text-white px-5 py-3 rounded w-full"
-        >
-          Unlock
-        </button>
+      </div>
+    );
+  }
+
+  if (!note) {
+    return (
+      <div className="text-center mt-20">
+        Note not found.
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-10">
+    <div className="max-w-3xl mx-auto mt-12">
 
-      <div className="border rounded-lg shadow p-6">
+      <div className="border rounded-xl shadow-lg p-6">
 
-        <h1 className="text-3xl font-bold mb-4">
-          {note?.title}
+        <h1 className="text-3xl font-bold">
+          {note.title}
         </h1>
 
-        <hr className="mb-4" />
+        <hr className="my-5" />
 
         <div className="whitespace-pre-wrap leading-7">
-          {note?.content}
+          {note.content}
         </div>
 
       </div>
+
     </div>
   );
 }

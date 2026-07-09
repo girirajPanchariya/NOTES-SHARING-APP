@@ -4,13 +4,24 @@ import { verifyToken } from "./jwt";
 export async function getUserId() {
   const cookieStore = await cookies();
 
+  console.log("Cookies:", cookieStore.getAll());
+
   const token = cookieStore.get("token")?.value;
 
+  console.log("Token:", token);
+
   if (!token) {
-    throw new Error("Unauthorized");
+    throw new Error("No token found");
   }
 
-  const decoded: any = verifyToken(token);
+  try {
+    const decoded = verifyToken(token) as { id: string };
 
-  return decoded.id;
+    console.log("Decoded:", decoded);
+
+    return decoded.id;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }

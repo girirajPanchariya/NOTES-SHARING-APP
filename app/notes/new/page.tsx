@@ -1,150 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import NoteForm from "@/app/components/NoteForm";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function NewNotePage() {
   const router = useRouter();
-
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    title: "",
-    content: "",
-    shareType: "ONE_TIME",
-    accessType: "PUBLIC",
-    expiry: "",
-  });
-
-  async function createNote(e: React.FormEvent) {
-    e.preventDefault();
-
-    setLoading(true);
-
+  async function createNote(data: any) {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
 
       const res = await fetch("/api/notes", {
         method: "POST",
-
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-
-        body: JSON.stringify(form),
+        body: JSON.stringify(data),
       });
 
-      const data = await res.json();
+      const result = await res.json();
 
       if (!res.ok) {
-        alert(data.message);
+        alert(result.message || "Failed to create note");
         return;
       }
 
-      router.push(`/notes/${data.id}`);
-    } catch {
-      alert("Something went wrong");
-    }
+      // Works with either API response shape
+      const noteId = result.note?.id || result.id;
 
-    setLoading(false);
+      if (!noteId) {
+        alert("Note ID not found");
+        console.log(result);
+        return;
+      }
+
+      router.push(`/notes/${noteId}`);
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-10">
-
-      <h1 className="text-3xl font-bold mb-6">
-        Create Note
-      </h1>
-
-      <form
+    <div className="max-w-3xl mx-auto mt-10 bg-green-50 text-black p-6 rounded-lg">
+      <NoteForm
         onSubmit={createNote}
-        className="space-y-5"
-      >
-        <input
-          className="w-full border rounded p-3"
-          placeholder="Title"
-          value={form.title}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              title: e.target.value,
-            })
-          }
-        />
-
-        <textarea
-          rows={8}
-          className="w-full border rounded p-3"
-          placeholder="Content"
-          value={form.content}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              content: e.target.value,
-            })
-          }
-        />
-
-        <select
-          className="w-full border rounded p-3"
-          value={form.shareType}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              shareType: e.target.value,
-            })
-          }
-        >
-          <option value="ONE_TIME">
-            One Time
-          </option>
-
-          <option value="TIME">
-            Time Based
-          </option>
-        </select>
-
-        <select
-          className="w-full border rounded p-3"
-          value={form.accessType}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              accessType: e.target.value,
-            })
-          }
-        >
-          <option value="PUBLIC">
-            Public
-          </option>
-
-          <option value="PASSWORD">
-            Password Protected
-          </option>
-        </select>
-
-        {form.shareType === "TIME" && (
-          <input
-            type="datetime-local"
-            className="w-full border rounded p-3"
-            value={form.expiry}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                expiry: e.target.value,
-              })
-            }
-          />
-        )}
-
-        <button
-          disabled={loading}
-          className="bg-blue-600 text-white px-6 py-3 rounded"
-        >
-          {loading ? "Creating..." : "Create Note"}
-        </button>
-      </form>
+        loading={loading}
+      />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export default function Navbar() {
 
   return (
     <nav className="w-full border-b bg-white shadow-sm">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between text-black">
 
         {/* Logo */}
         <Link
@@ -39,8 +39,8 @@ export default function Navbar() {
           {isLoggedIn ? (
             <>
               <Link
-                href="/notes/new"
-                className={linkClass("/notes/new")}
+                href="notes\new"
+                className={linkClass("notes\new")}
               >
                 New Note
               </Link>
@@ -55,14 +55,14 @@ export default function Navbar() {
           ) : (
             <>
               <Link
-                href="/login"
+                href="/auth/login"
                 className={linkClass("/login")}
               >
                 Login
               </Link>
 
               <Link
-                href="/register"
+                href="/auth\register"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
               >
                 Register

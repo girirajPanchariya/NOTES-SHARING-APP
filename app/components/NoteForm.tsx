@@ -7,7 +7,6 @@ interface NoteFormProps {
     title: string;
     content: string;
     shareType: "ONE_TIME" | "TIME";
-    accessType: "PUBLIC" | "PASSWORD";
     expiry?: string;
   };
 
@@ -25,14 +24,14 @@ export default function NoteForm({
     title: initialData?.title || "",
     content: initialData?.content || "",
     shareType: initialData?.shareType || "ONE_TIME",
-    accessType: initialData?.accessType || "PUBLIC",
+    accessType: "PUBLIC",
     expiry: initialData?.expiry || "",
   });
 
   const [error, setError] = useState("");
 
   const handleSubmit = async (
-    e: React.FormEvent
+    e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
 
@@ -52,20 +51,23 @@ export default function NoteForm({
       form.shareType === "TIME" &&
       !form.expiry
     ) {
-      setError("Select expiry date");
+      setError("Please select an expiry date.");
       return;
     }
 
-    await onSubmit(form);
+    await onSubmit({
+      ...form,
+      accessType: "PUBLIC",
+    });
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 bg-white shadow rounded-xl p-6"
+      className="bg-white shadow rounded-xl p-6 space-y-5"
     >
       <h2 className="text-2xl font-bold">
-        Note Details
+        Create Note
       </h2>
 
       {error && (
@@ -81,6 +83,7 @@ export default function NoteForm({
 
         <input
           className="border w-full rounded p-3 mt-1"
+          placeholder="Enter title"
           value={form.title}
           onChange={(e) =>
             setForm({
@@ -99,6 +102,7 @@ export default function NoteForm({
         <textarea
           rows={8}
           className="border w-full rounded p-3 mt-1"
+          placeholder="Write your note..."
           value={form.content}
           onChange={(e) =>
             setForm({
@@ -136,37 +140,10 @@ export default function NoteForm({
         </select>
       </div>
 
-      <div>
-        <label className="font-medium">
-          Access Type
-        </label>
-
-        <select
-          className="border w-full rounded p-3 mt-1"
-          value={form.accessType}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              accessType: e.target.value as
-                | "PUBLIC"
-                | "PASSWORD",
-            })
-          }
-        >
-          <option value="PUBLIC">
-            Public
-          </option>
-
-          <option value="PASSWORD">
-            Password Protected
-          </option>
-        </select>
-      </div>
-
       {form.shareType === "TIME" && (
         <div>
           <label className="font-medium">
-            Expiry
+            Expiry Date
           </label>
 
           <input
@@ -184,12 +161,11 @@ export default function NoteForm({
       )}
 
       <button
+        type="submit"
         disabled={loading}
-        className="bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-lg"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
       >
-        {loading
-          ? "Saving..."
-          : "Save Note"}
+        {loading ? "Saving..." : "Save Note"}
       </button>
     </form>
   );

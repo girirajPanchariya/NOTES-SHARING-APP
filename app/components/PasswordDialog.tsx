@@ -11,32 +11,29 @@ export default function PasswordDialog({
   token,
   onUnlock,
 }: PasswordDialogProps) {
-  const [password, setPassword] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function unlock() {
-    setLoading(true);
-    setError("");
+    if (!password.trim()) {
+      setError("Password is required");
+      return;
+    }
 
     try {
+      setLoading(true);
+      setError("");
+
       const res = await fetch(
         `/api/share/${token}/unlock`,
         {
           method: "POST",
-
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
-            password,
+            password: password.trim(),
           }),
         }
       );
@@ -44,37 +41,43 @@ export default function PasswordDialog({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message);
+        setError(data.message || "Unable to unlock");
         return;
       }
 
-      onUnlock(data.note);
-    } catch {
-      setError("Unable to unlock");
-    }
+      setPassword("");
 
-    setLoading(false);
+      onUnlock(data.note);
+
+    } catch (error) {
+      console.error(error);
+      setError("Server Error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white shadow rounded-xl p-6">
+    <div className="max-w-md mx-auto bg-white shadow-lg rounded-xl p-6">
 
-      <h2 className="text-2xl font-bold mb-4">
-        Password Protected
+      <h2 className="text-2xl font-bold mb-6">
+        Password Protected Note
       </h2>
 
       <input
         type="password"
-        placeholder="Access Password"
-        className="border rounded w-full p-3"
+        placeholder="Enter Password"
         value={password}
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
+        disabled={loading}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setError("");
+        }}
+        className="border rounded-lg w-full p-3"
       />
 
       {error && (
-        <p className="text-red-500 mt-3">
+        <p className="text-red-600 mt-3">
           {error}
         </p>
       )}
@@ -82,13 +85,10 @@ export default function PasswordDialog({
       <button
         onClick={unlock}
         disabled={loading}
-        className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
+        className="mt-5 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 rounded-lg"
       >
-        {loading
-          ? "Checking..."
-          : "Unlock Note"}
+        {loading ? "Unlocking..." : "Unlock Note"}
       </button>
-
     </div>
   );
 }

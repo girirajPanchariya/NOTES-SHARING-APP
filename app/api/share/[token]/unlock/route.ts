@@ -1,12 +1,26 @@
-import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
-export async function GET(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
+    const body = await req.json();
+
+    // Validate password
+    if (!body.password || typeof body.password !== "string") {
+      return NextResponse.json(
+        {
+          message: "Password is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     const share = await prisma.shareLink.findUnique({
       where: {
@@ -20,7 +34,7 @@ export async function GET(
     if (!share) {
       return NextResponse.json(
         {
-          message: "Invalid Share Link",
+          message: "Invalid Link",
         },
         {
           status: 404,
@@ -40,7 +54,7 @@ export async function GET(
       );
     }
 
-    // Expired
+    // Time expired
     if (
       share.shareType === "TIME" &&
       share.expiresAt &&
@@ -56,7 +70,7 @@ export async function GET(
       );
     }
 
-    // One Time Already Used
+    // One time already used
     if (
       share.shareType === "ONE_TIME" &&
       share.used
@@ -71,11 +85,32 @@ export async function GET(
       );
     }
 
-    // Password Required
-    if (share.accessType === "PASSWORD") {
-      return NextResponse.json({
-        passwordRequired: true,
-      });
+    // Must be password protected
+    if (share.accessType !== "PASSWORD") {
+      return NextResponse.json(
+        {
+          message: "This link does not require a password",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const match = await bcrypt.compare(
+      body.password,
+      share.password || ""
+    );
+
+    if (!match) {
+      return NextResponse.json(
+        {
+          message: "Wrong Password",
+        },
+        {
+          status: 401,
+        }
+      );
     }
 
     // Atomic update
@@ -113,6 +148,7 @@ export async function GET(
     }
 
     return NextResponse.json({
+      success: true,
       note: share.note,
     });
   } catch (error) {
